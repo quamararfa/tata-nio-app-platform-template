@@ -1,0 +1,136 @@
+stages:
+  - build
+  - test
+  - pre-deploy
+  - deploy
+
+default:
+  tags:
+  - ${CI_PROJECT_NAME}
+      
+npm-build:
+  rules:
+  - when: never
+
+.common:
+  before_script:
+  - npm install -g aws-cdk@latest
+  - cdk --version
+
+check-diff-dev:
+  extends: .common
+  environment: development
+  stage: pre-deploy
+  variables:
+    AWS_DEFAULT_REGION: "$AWS_DEFAULT_REGION"
+    CDK_DEPLOY_ACCOUNT: "$DEV_ACCOUNT_ID"
+    CDK_DEPLOY_REGION: "$AWS_DEFAULT_REGION"
+    ANALYTICS_ACCOUNT_ID: "$DEV_ANALYTICS_ACCOUNT"
+    DATALAKE_ACCOUNT_ID: "$DEV_DATALAKE_ACCOUNT"
+    FLEETWISE_ACCOUNT_ID: "$DEV_FLEETWISE_ACCOUNT"
+  script:
+  - cdk diff --all -c environment=dev --require-approval never --ci
+  only:
+    - main
+
+deploy-dev:
+  extends: .common
+  stage: deploy
+  environment: development
+  variables:
+    AWS_CREDS_TARGET_ROLE: "$DEV_TARGET_ROLE_ARN"
+    AWS_DEFAULT_REGION: "$AWS_DEFAULT_REGION"
+    CDK_DEPLOY_ACCOUNT: "$DEV_ACCOUNT_ID"
+    CDK_DEPLOY_REGION: "$AWS_DEFAULT_REGION"
+    ANALYTICS_ACCOUNT_ID: "$DEV_ANALYTICS_ACCOUNT"
+    DATALAKE_ACCOUNT_ID: "$DEV_DATALAKE_ACCOUNT"
+    FLEETWISE_ACCOUNT_ID: "$DEV_FLEETWISE_ACCOUNT"
+  script:
+  - cdk synth --all -c environment=dev --require-approval never --ci
+  - cdk deploy --all -c environment=dev --require-approval never --ci
+  when: manual
+  only:
+    - main
+  needs: ['check-diff-dev']
+
+check-diff-uat:
+  extends: .common
+  environment: uat
+  stage: pre-deploy
+  variables:
+    AWS_DEFAULT_REGION: "$AWS_DEFAULT_REGION"
+    CDK_DEPLOY_ACCOUNT: "$UAT_APPLICATION_ACCOUNT"
+    CDK_DEPLOY_REGION: "$AWS_DEFAULT_REGION"
+    ANALYTICS_ACCOUNT_ID: "$UAT_ANALYTICS_ACCOUNT"
+    DATALAKE_ACCOUNT_ID: "$UAT_DATALAKE_ACCOUNT"
+    FLEETWISE_ACCOUNT_ID: "$UAT_FLEETWISE_ACCOUNT"
+  script:
+  - cdk diff --all -c environment=uat --require-approval never --ci
+  only:
+    - releases
+
+deploy-uat:
+  extends: .common
+  stage: deploy
+  environment: uat
+  variables:
+    AWS_DEFAULT_REGION: "$AWS_DEFAULT_REGION"
+    CDK_DEPLOY_ACCOUNT: "$UAT_APPLICATION_ACCOUNT"
+    CDK_DEPLOY_REGION: "$AWS_DEFAULT_REGION"
+    ANALYTICS_ACCOUNT_ID: "$UAT_ANALYTICS_ACCOUNT"
+    DATALAKE_ACCOUNT_ID: "$UAT_DATALAKE_ACCOUNT"
+    FLEETWISE_ACCOUNT_ID: "$UAT_FLEETWISE_ACCOUNT"
+  script:
+  - cdk synth --all -c environment=uat --require-approval never --ci
+  - cdk deploy --all -c environment=uat --require-approval never --ci
+  when: manual
+  only:
+    - releases
+  needs: ['check-diff-uat']
+deploy-sandbox:
+  extends: .common
+  stage: deploy
+  environment: 
+    name: sandbox-${CI_COMMIT_REF_SLUG}
+    on_stop: stop_sandbox
+  variables:
+    ENVIRONMENT: $CI_COMMIT_REF_SLUG
+    AWS_DEFAULT_REGION: "$AWS_DEFAULT_REGION"
+    CDK_DEPLOY_ACCOUNT: "$DEV_ACCOUNT_ID"
+    CDK_DEPLOY_REGION: "$AWS_DEFAULT_REGION"
+    ANALYTICS_ACCOUNT_ID: "$DEV_ANALYTICS_ACCOUNT"
+    DATALAKE_ACCOUNT_ID: "$DEV_DATALAKE_ACCOUNT"
+    FLEETWISE_ACCOUNT_ID: "$DEV_FLEETWISE_ACCOUNT"
+  script:
+  - cp -rav environments/sandbox environments/$CI_COMMIT_REF_SLUG
+  - cdk deploy --all -c environment=$CI_COMMIT_REF_SLUG --require-approval never --ci
+  only:
+    - ^feature\/[a-z\d]+([-\/_.][a-z\d]+)*$
+
+stop_sandbox:
+  stage: deploy
+  environment: 
+    name: sandbox-${CI_COMMIT_REF_SLUG}
+    action: stop
+  variables:
+    ENVIRONMENT: $CI_COMMIT_REF_SLUG
+    AWS_DEFAULT_REGION: "$AWS_DEFAULT_REGION"
+    CDK_DEPLOY_ACCOUNT: "$DEV_ACCOUNT_ID"
+    CDK_DEPLOY_REGION: "$AWS_DEFAULT_REGION"
+    ANALYTICS_ACCOUNT_ID: "$DEV_ANALYTICS_ACCOUNT"
+    DATALAKE_ACCOUNT_ID: "$DEV_DATALAKE_ACCOUNT"
+    FLEETWISE_ACCOUNT_ID: "$DEV_FLEETWISE_ACCOUNT"
+  script:
+  - cp -rav environments/sandbox environments/$CI_COMMIT_REF_SLUG
+  - cdk destroy --all -c environment=$CI_COMMIT_REF_SLUG --require-approval never --ci
+  only:
+    - ^feature\/[a-z\d]+([-\/_.][a-z\d]+)*$
+
+
+include:
+  - project: 'tata-nio-autobahn/tata-nio-shared-libraries/tata-nio-ci-templates'
+    file: '/templates/ash-scans.gitlab-ci.yml'
+  - project: 'tata-nio-autobahn/tata-nio-shared-libraries/tata-nio-ci-templates'
+    file: '/templates/node-build.gitlab-ci.yml'
+  - project: 'tata-nio-autobahn/tata-nio-shared-libraries/tata-nio-ci-templates'
+    file: '/templates/code-quality.gitlab-ci.yml'
