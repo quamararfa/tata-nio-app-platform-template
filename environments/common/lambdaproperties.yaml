@@ -1,0 +1,7 @@
+runtime: nodejs20.x
+memorySize: 512
+timeout: 180
+tracing: true
+deploymentConfig: CANARY
+logConfiguration:
+  retention: TWO_WEEKS
