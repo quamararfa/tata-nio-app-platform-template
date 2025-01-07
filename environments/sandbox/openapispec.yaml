@@ -1,0 +1,52 @@
+useCase: api
+appName: template
+vpcId: 'vpc-0feffee2dea30654f'
+openapiSpecPath: "./environments/sandbox/openapispec.yaml"
+apiname: test-app
+apiGwlogConfiguration:
+  retention: TWO_WEEKS
+apigatewayProperties:
+  deploy: true
+  disableExecuteApiEndpoint: true
+  deployOptions:
+    dataTraceEnabled: false
+    loggingLevel: ERROR
+    metricsEnabled: true
+    tracingEnabled: true
+usagePlanProps:
+  throttle: 
+    rateLimit: 10
+    burstLimit: 20
+  quota:
+    limit: 100
+    period: DAY #WEEK | MONTH | DAY
+jobs:
+  - jobName: sample-job
+    jobProps:   
+      lambdaFunctionPropsFile: "./environments/common/lambdaproperties.yaml"
+      environmentVarsFilePath: "./environments/sandbox/environment-variables/sample.env"
+      iamPolicyStatementsFilePath: "./environments/sandbox/permissions/sample.json"
+
+packages:
+  - packageName: sample
+    packageProps:
+      lambdaFunctionPropsFile: "./environments/common/lambdaproperties.yaml"
+      environmentVarsFilePath: "./environments/sandbox/environment-variables/sample.env"
+      iamPolicyStatementsFilePath: "./environments/sandbox/permissions/sample.json"
+    tablePropsPath: "./environments/sandbox/table-config/sample.yaml"   
+
+tags:
+  - key: Organization
+    value: "TATA MOTORS"
+  - key: "Business Unit"
+    value: "N.IO"
+  - key: repo_url
+    value: "https://gitlabcentralpv.inservices.tatamotors.com/tata-nio-autobahn/tata-nio-app-platform/tata-nio-app-platform-template"
+  - key: environment
+    value: "sandbox"
+  - key: deployedVia
+    value: "cdk"
+  - key: owner
+    value: "devops@tatamotors.com"
+  - key: team
+    value: "appdev"

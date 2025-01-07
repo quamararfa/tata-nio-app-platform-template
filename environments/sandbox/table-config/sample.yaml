@@ -1,0 +1,19 @@
+tableName: example
+partitionKey:
+  name: 'id'
+  type: S
+# sortKey:
+#   name: 'sk'
+#   type: S
+pointInTimeRecovery: false
+# globalSecondaryIndexes:
+#   - indexName: 'gsi1'
+#     partitionKey:
+#       name: 'gsi1pk'
+#       type: S
+#     sortKey:
+#       name: 'gsi1sk'
+#       type: S
+#     projectionType: INCLUDE
+#     nonKeyAttributes: 
+#       - 'data'
